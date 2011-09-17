@@ -215,8 +215,7 @@ function(req, res, next) {
     var options = {
         clientId: process.env.CLIENT_ID,
         clientSecret: process.env.CLIENT_SECRET,
-        loginServer: process.env.LOGIN_SERVER,
-        redirectUri: process.env.REDIRECT_URI
+        loginServer: process.env.LOGIN_SERVER
     };
     
     console.log('BIND - trying login with username ' + username)

@@ -9,12 +9,17 @@ Pre-requisites
 [ldapjs](http://ldapjs.org/)
 
     npm install ldapjs
-    
+
+You will need to create a remote access app in your Force.com org - Setup | App Setup | Develop | Remote Access. Just use http://localhost as a dummy Callback URL - this app uses username/password authentication and doesn't need the callback.
+  
 Usage
 -----
 
 To start the server
 
+    export CLIENT_ID="YOUR_CONSUMER_KEY"
+    export CLIENT_SECRET="YOUR_CONSUMER_SECRET"
+    export LOGIN_SERVER="https://login.salesforce.com"
     node server.js
     
 To run a query from command-line `ldapsearch`
