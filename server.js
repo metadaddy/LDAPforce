@@ -81,14 +81,14 @@ for (var objtype in ldapToObject) {
     }
 }
 
-function makeFieldList(attributes, objtype, userFields) {
+function makeFieldList(attributes, objtype, objectFields) {
     var fieldList  = ['id'];
     for (var i in attributes) {
         // map LDAP attributes to Force.com fields
         var attribute = ldapToObject[objtype].mappings[attributes[i]] || 
             attributes[i];
         // filter out unknown fields
-        if (userFields.indexOf(attribute) != -1) {
+        if (objectFields.indexOf(attribute) != -1) {
             // filter out dupes
             if ( fieldList.indexOf(attribute) == -1) {
                 fieldList.push(attribute);                
@@ -124,8 +124,8 @@ function markTestAndEnd(res, objtype) {
 
 function doQuery(req, res, next, objtype, whereClause) {
     var fieldList = (req.attributes.length == 0) ? 
-        req.connection.userFields[objtype] : 
-        makeFieldList(req.attributes, objtype, req.connection.userFields[objtype]);
+        req.connection.objectFields[objtype] : 
+        makeFieldList(req.attributes, objtype, req.connection.objectFields[objtype]);
 
     var fields = '';
     for (var i in fieldList) {
@@ -248,21 +248,21 @@ function(req, res, next) {
                 whereClause = ' WHERE ' + whereClause;
             }
 
-            // Need to load userFields before we can do the query
-            if ( req.connection.userFields && req.connection.userFields[objtype] ) {
+            // Need to load objectFields before we can do the query
+            if ( req.connection.objectFields && req.connection.objectFields[objtype] ) {
                 doQuery(req, res, next, objtype, whereClause);
             } else {
-                if ( ! req.connection.userFields ) {
-                    req.connection.userFields = {};
+                if ( ! req.connection.objectFields ) {
+                    req.connection.objectFields = {};
                 }
                 // Need a closure here otherwise we'll keep a reference to 
                 // the objtype value that can change before we get called back
                 req.connection.api.describe(objtype, function(ot) {
                     return function(data) {
-                        req.connection.userFields[ot] = [];
+                        req.connection.objectFields[ot] = [];
                         for ( var i in data.fields ) {
                             // Attribute names are normalized to lower case in ldapjs
-                            req.connection.userFields[ot].push(data.fields[i].name.toLowerCase());
+                            req.connection.objectFields[ot].push(data.fields[i].name.toLowerCase());
                         }
                         doQuery(req, res, next, ot, whereClause);                        
                     }
