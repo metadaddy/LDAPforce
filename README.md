@@ -10,7 +10,7 @@ Pre-requisites
 
     npm install ldapjs
 
-You will need to create a remote access app in your Force.com org - Setup | App Setup | Develop | Remote Access. Just use http://localhost as a dummy Callback URL - this app uses username/password authentication and doesn't need the callback.
+You will need to create a remote access app in your Force.com org - Setup | App Setup | Develop | Remote Access. Just use  ldap://force as a dummy Callback URL - this app uses username/password authentication and doesn't need the callback.
   
 Usage
 -----
