@@ -4,67 +4,88 @@ var ldap = require('ldapjs'),
 
 var server = ldap.createServer();
 var SUFFIX = 'dc=salesforce, dc=com';
-var userFields = null;
+var debug = process.env.DEBUG;
 
-var inetorgpersonToUser = {
-    cn: 'name',
-    departmentnumber: 'department',
-    displayname: 'name',
-    employeenumber: 'employeenumber',
-    facsimiletelephonenumber: 'fax',
-    givenname: 'firstname',
-    mail: 'email',
-    mobile: 'mobilephone',
-    postalcode: 'postalcode',
-    preferredlanguage: 'localesidkey',
-    sn: 'lastname',
-    telephonenumber: 'phone',
-    title: 'title',
-    uid: 'id'
+function debugOut(o) {
+    if (debug)
+        console.log(o);
+}
+
+// These are the mappings from LDAP object classes to Force.com object types.
+// Each entry in ldapToObject is indexed by the Force.com object type and 
+// contains the corresponding LDAP object classes and a mapping of LDAP attribute
+// names to Force.com field names
+var ldapToObject = {
+    user: {
+        objectclasses: [
+            'top', 
+            'person', 
+            'organizationalPerson', 
+            'inetOrgPerson'
+        ],
+        mappings: {
+            cn: 'name',
+            departmentnumber: 'department',
+            displayname: 'name',
+            employeenumber: 'employeenumber',
+            facsimiletelephonenumber: 'fax',
+            givenname: 'firstname',
+            mail: 'email',
+            mobile: 'mobilephone',
+            postalcode: 'postalcode',
+            preferredlanguage: 'localesidkey',
+            sn: 'lastname',
+            telephonenumber: 'phone',
+            title: 'title',
+            uid: 'id'
+        }
+    }, 
+    contact: {
+        objectclasses: [
+            'top', 
+            'person', 
+            'organizationalPerson', 
+            'inetOrgPerson'
+        ],
+        mappings: {
+            cn: 'name',
+            departmentnumber: 'department',
+            description: 'description',
+            displayname: 'name',
+            facsimiletelephonenumber: 'fax',
+            givenname: 'firstname',
+            homephone: 'homephone', 
+            mail: 'email',
+            mobile: 'mobilephone',
+            telephonenumber: 'phone',
+            title: 'title',
+            sn: 'lastname',
+            uid: 'id'
+        }
+    }
 };
 
-var userToInetorgperson = {};
-for (var key in inetorgpersonToUser) {
-    value = inetorgpersonToUser[key];
-    if (userToInetorgperson[value]) {
-        userToInetorgperson[value].push(key);
-    } else {        
-        userToInetorgperson[value] = [key];
+// make inverse mappings
+var objectToLdap = {};
+for (var objtype in ldapToObject) {
+    for (var key in ldapToObject[objtype].mappings) {
+        value = ldapToObject[objtype].mappings[key];
+        if (!objectToLdap[objtype]) {
+            objectToLdap[objtype] = {}
+        }
+        if (objectToLdap[objtype][value]) {
+            objectToLdap[objtype][value].push(key);
+        } else {        
+            objectToLdap[objtype][value] = [key];
+        }
     }
 }
 
-var inetorgpersonToContact = {
-    cn: 'name',
-    departmentnumber: 'department',
-    description: 'description',
-    displayname: 'name',
-    facsimiletelephonenumber: 'fax',
-    givenname: 'firstname',
-    homephone: 'homephone', 
-    mail: 'email',
-    mobile: 'mobilephone',
-    telephonenumber: 'phone',
-    title: 'title',
-    sn: 'lastname',
-    uid: 'id'
-};
-
-var contactToInetorgperson = {};
-for (var key in inetorgpersonToContact) {
-    value = inetorgpersonToContact[key];
-    if (contactToInetorgperson[value]) {
-        contactToInetorgperson[value].push(key);
-    } else {        
-        contactToInetorgperson[value] = [key];
-    }
-}
-
-function makeFieldList(attributes) {
-    // Need Username for dn
-    var fieldList  = ['id', 'username'];
+function makeFieldList(attributes, objtype, userFields) {
+    var fieldList  = ['id'];
     for (var i in attributes) {
-        // map inetOrgPerson attributes to User fields
-        var attribute = inetorgpersonToUser[attributes[i]] || 
+        // map LDAP attributes to Force.com fields
+        var attribute = ldapToObject[objtype].mappings[attributes[i]] || 
             attributes[i];
         // filter out unknown fields
         if (userFields.indexOf(attribute) != -1) {
@@ -77,27 +98,53 @@ function makeFieldList(attributes) {
     return fieldList;
 }
 
-function doQuery(req, res, next, whereClause) {
-    var objectType = 'User'; // just for now
-    
+function initObjtypes(res) {
+    // Fill an object with the objtypes so we know when we're done
+    res.objtypes = {};
+    for (var objtype in ldapToObject) {
+        res.objtypes[objtype] = true;
+    }
+}
+
+// mark this objtype as done; if none left to do then end the response
+function markTestAndEnd(res, objtype) {
+    res.objtypes[objtype] = false;
+    var done = true;
+    //debugOut("markTestAndEnd: "+objtype);
+    //debugOut(res.objtypes);
+    for (o in res.objtypes) {
+        if (res.objtypes[o]) {
+            done = false;
+        }
+    }
+    if (done) {
+        res.end();
+    }
+}
+
+function doQuery(req, res, next, objtype, whereClause) {
     var fieldList = (req.attributes.length == 0) ? 
-        userFields : makeFieldList(req.attributes);
+        req.connection.userFields[objtype] : 
+        makeFieldList(req.attributes, objtype, req.connection.userFields[objtype]);
 
     var fields = '';
     for (var i in fieldList) {
         fields += ((i != 0) ? ',' : '') + fieldList[i];
     }
     
-    var query = 'SELECT ' + fields + ' FROM ' + objectType + whereClause;
+    var query = 'SELECT ' + fields + ' FROM ' + objtype + whereClause;
     
-    console.log('query is '+query);
+    debugOut('query is '+query);
     
     req.connection.api.query(query, function(data) {
+        // Capitalized objtype to look nice in DNs
+        var cObjtype = objtype.charAt(0).toUpperCase() + objtype.slice(1);
+
 		for (var i in data.records) {
 			var obj = {
-                dn: 'username='+data.records[i].Username+', ou=Users, '+SUFFIX,
+                dn: 'uid='+data.records[i].Id+', ou='+cObjtype+'s, '+SUFFIX,
                 attributes: {
-                    objectclass: ['top', 'person', 'organizationalPerson', 'inetOrgPerson', 'salesforceUser'],
+                    objectclass: ldapToObject[objtype].objectclasses.concat(['salesforce'+cObjtype])
                 }
             }
             for (key in data.records[i]) {
@@ -106,27 +153,27 @@ function doQuery(req, res, next, whereClause) {
                     // ldapjs to handle them for us
                     var attribute = key.toLowerCase();
                     var value = data.records[i][key].toString();
-                    
+                
                     obj.attributes[attribute] = value;
-                    
-                    for (var j in userToInetorgperson[attribute]) {
-                        obj.attributes[userToInetorgperson[attribute][j]] = value;
+                
+                    for (var j in objectToLdap[objtype][attribute]) {
+                        obj.attributes[objectToLdap[objtype][attribute][j]] = value;
                     }
                 }
             }
 			res.send(obj);
-		};
-		res.end();
-	}, function () {
+		}
+		markTestAndEnd(res, objtype);
+	} , function () {
         // TODO - Figure out the correct error
         return next(new ldap.OperationsError());
 	});    
 }
 
-function filterToString(filter) {
+function filterToString(objtype, filter) {
     var str;
     
-    var attribute = inetorgpersonToUser[filter.attribute] || filter.attribute;
+    var attribute = ldapToObject[objtype].mappings[filter.attribute] || filter.attribute;
         
     switch (filter.type) {
     case 'approx':
@@ -159,52 +206,74 @@ function filterToString(filter) {
     case 'and':
         str = '';
         for ( var i in filter.filters ) {
-            str += ((i != 0) ? 'AND' : '') + '(' + filterToString(filter.filters[i]) + ')';
+            str += ((i != 0) ? 'AND' : '') + '(' + filterToString(objtype, filter.filters[i]) + ')';
         }
         break;
     case 'or':
         str = '';
         for ( var i in filter.filters ) {
-            str += ((i != 0) ? 'OR' : '') + '(' + filterToString(filter.filters[i]) + ')';
+            str += ((i != 0) ? 'OR' : '') + '(' + filterToString(objtype, filter.filters[i]) + ')';
         }
         break;
     case 'not':
-        str = 'NOT(' + filterToString(filter.filter) + ')';
+        str = 'NOT(' + filterToString(objtype, filter.filter) + ')';
         break;
     }
     
     return str;
 }
 
-// TODO - search in User/Contact depending on ou
 server.search(SUFFIX,
 function(req, res, next) {
-    console.log('attributes: ' + JSON.stringify(req.attributes, null, '    '))
-    console.log('base object: ' + JSON.stringify(req.dn, null, '    '));
-    console.log('scope: ' + req.scope);
-    console.log('filter: ' + JSON.stringify(req.filter, null, '    '));
+    debugOut('attributes: ' + JSON.stringify(req.attributes, null, '    '))
+    debugOut('base object: ' + JSON.stringify(req.dn, null, '    '));
+    debugOut('scope: ' + req.scope);
+    //debugOut('filter: ' + JSON.stringify(req.filter, null, '    '));
     
-    var whereClause = filterToString(req.filter);
+    // Trim the 's' off the ou to get an object type
+    var ou = req.dn.rdns[0].ou && 
+        req.dn.rdns[0].ou.toLowerCase().substring(0, req.dn.rdns[0].ou.length - 1);
+        
+    debugOut('ou: ' + ou);
     
-    if (whereClause) {
-        whereClause = ' WHERE ' + whereClause;
-    }
+    var obj = {};
 
-    // Need to load userFields before we can do the query
-    if ( userFields ) {
-        return doQuery(req, res, next, whereClause);
-    } else {
-        req.connection.api.describe('User', function(data) {
-            userFields = [];
-            for ( var i in data.fields ) {
-                // Attribute names are normalized to lower case in ldapjs
-                userFields.push(data.fields[i].name.toLowerCase());
+    initObjtypes(res);
+    
+    for (var objtype in ldapToObject) {
+        if ( (!ou) || ou === objtype ) {
+            var whereClause = filterToString(objtype, req.filter);
+
+            if (whereClause) {
+                whereClause = ' WHERE ' + whereClause;
             }
-            return doQuery(req, res, next, whereClause);
-        }, function () {
-            // TODO - Figure out the correct error
-            return next(new ldap.OperationsError());
-        });
+
+            // Need to load userFields before we can do the query
+            if ( req.connection.userFields && req.connection.userFields[objtype] ) {
+                doQuery(req, res, next, objtype, whereClause);
+            } else {
+                if ( ! req.connection.userFields ) {
+                    req.connection.userFields = {};
+                }
+                // Need a closure here otherwise we'll keep a reference to 
+                // the objtype value that can change before we get called back
+                req.connection.api.describe(objtype, function(ot) {
+                    return function(data) {
+                        req.connection.userFields[ot] = [];
+                        for ( var i in data.fields ) {
+                            // Attribute names are normalized to lower case in ldapjs
+                            req.connection.userFields[ot].push(data.fields[i].name.toLowerCase());
+                        }
+                        doQuery(req, res, next, ot, whereClause);                        
+                    }
+                }(objtype), function () {
+                    // TODO - Figure out the correct error
+                    return next(new ldap.OperationsError());
+                });
+            }            
+        } else {
+            markTestAndEnd(res, objtype);
+        }
     }
 });
 
@@ -218,26 +287,26 @@ function(req, res, next) {
         loginServer: process.env.LOGIN_SERVER
     };
     
-    console.log('BIND - trying login with username ' + username)
+    debugOut('BIND - trying login with username ' + username)
     oauth.login(username, password, options,
     function(oauth) {
-        console.log("BIND - got OAuth response"+JSON.stringify(oauth, null, '    '));
+        debugOut("BIND - got OAuth response"+JSON.stringify(oauth, null, '    '));
         req.connection.api = rest.api(oauth, function(callback){
-            console.log("BIND - refreshing token");
+            debugOut("BIND - refreshing token");
             oauth.login(username, password, options, callback, function(e) {
-                console.log('Error ' + e);
+                debugOut('Error ' + JSON.stringify(e, null, '    '));
                 // eek - what now?
             })
         });
         res.end();
     },
     function(e) {
-        console.log('Error ' + JSON.stringify(e, null, '    '));
+        debugOut('Error ' + JSON.stringify(e, null, '    '));
         return next(new ldap.InvalidCredentialsError());
     });
 });
 
 server.listen(1389,
 function() {
-    console.log('ldapjs listening at ' + server.url);
+    debugOut('ldapjs listening at ' + server.url);
 });

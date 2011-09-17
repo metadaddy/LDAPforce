@@ -4,7 +4,7 @@ var oauth = require('./oauth.js');
 function request(options) {
 	// TODO - API version
 	var restUrl = options.oauth.instance_url + '/services/data' + options.path;
-	console.log("\n\nrest.request - method: " + options.method + " restUrl: " + restUrl + ", data: " + options.data);
+	//console.log("rest.request - method: " + options.method + " restUrl: " + restUrl + ", data: " + options.data);
 	
 	rest.request(restUrl, {
 	    method: options.method,
@@ -16,7 +16,7 @@ function request(options) {
 	    }
     }).on('complete', function(data, response) {
         if (response.statusCode >= 200 && response.statusCode < 300) {
-			console.log("REST Response: " + data);
+			//console.log("REST Response: " + data);
 			if (data.length == 0) {
 				options.callback();
 			} else {
