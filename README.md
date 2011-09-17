@@ -17,8 +17,8 @@ Usage
 
 To start the server
 
-    export CLIENT_ID="YOUR_CONSUMER_KEY"
-    export CLIENT_SECRET="YOUR_CONSUMER_SECRET"
+    export CLIENT_ID="YOUR_REMOTE_ACCESS_APP_CONSUMER_KEY"
+    export CLIENT_SECRET="YOUR_REMOTE_ACCESS_APP_CONSUMER_SECRET"
     export LOGIN_SERVER="https://login.salesforce.com"
     node server.js
     
