@@ -10,16 +10,13 @@
             "cn": "name",
             "departmentnumber": "department",
             "displayname": "name",
-            "employeenumber": "employeenumber",
             "facsimiletelephonenumber": "fax",
             "givenname": "firstname",
             "mail": "email",
             "mobile": "mobilephone",
-            "postalcode": "postalcode",
             "preferredlanguage": "localesidkey",
             "sn": "lastname",
             "telephonenumber": "phone",
-            "title": "title",
             "uid": "id"
         }
     }, 
@@ -33,15 +30,12 @@
         "mappings": {
             "cn": "name",
             "departmentnumber": "department",
-            "description": "description",
             "displayname": "name",
             "facsimiletelephonenumber": "fax",
             "givenname": "firstname",
-            "homephone": "homephone", 
             "mail": "email",
             "mobile": "mobilephone",
             "telephonenumber": "phone",
-            "title": "title",
             "sn": "lastname",
             "uid": "id"
         }
@@ -55,13 +49,11 @@
         ],
         "mappings": {
             "cn": "name",
-            "description": "description",
             "displayname": "name",
             "facsimiletelephonenumber": "fax",
             "givenname": "firstname",
             "mail": "email",
             "telephonenumber": "phone",
-            "title": "title",
             "sn": "lastname",
             "uid": "id"
         }
