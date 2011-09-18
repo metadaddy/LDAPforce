@@ -1,6 +1,7 @@
 var ldap = require('ldapjs'),
     oauth = require('./oauth'),
-    rest = require('./rest');
+    rest = require('./rest'),
+    fs = require('fs');
 
 var server = ldap.createServer();
 var SUFFIX = 'dc=salesforce, dc=com';
@@ -15,55 +16,18 @@ function debugOut(o) {
 // Each entry in ldapToObject is indexed by the Force.com object type and 
 // contains the corresponding LDAP object classes and a mapping of LDAP attribute
 // names to Force.com field names
-var ldapToObject = {
-    user: {
-        objectclasses: [
-            'top', 
-            'person', 
-            'organizationalPerson', 
-            'inetOrgPerson'
-        ],
-        mappings: {
-            cn: 'name',
-            departmentnumber: 'department',
-            displayname: 'name',
-            employeenumber: 'employeenumber',
-            facsimiletelephonenumber: 'fax',
-            givenname: 'firstname',
-            mail: 'email',
-            mobile: 'mobilephone',
-            postalcode: 'postalcode',
-            preferredlanguage: 'localesidkey',
-            sn: 'lastname',
-            telephonenumber: 'phone',
-            title: 'title',
-            uid: 'id'
-        }
-    }, 
-    contact: {
-        objectclasses: [
-            'top', 
-            'person', 
-            'organizationalPerson', 
-            'inetOrgPerson'
-        ],
-        mappings: {
-            cn: 'name',
-            departmentnumber: 'department',
-            description: 'description',
-            displayname: 'name',
-            facsimiletelephonenumber: 'fax',
-            givenname: 'firstname',
-            homephone: 'homephone', 
-            mail: 'email',
-            mobile: 'mobilephone',
-            telephonenumber: 'phone',
-            title: 'title',
-            sn: 'lastname',
-            uid: 'id'
-        }
-    }
-};
+var ldapToObject;
+
+// load mappings
+var configFile = process.env.CONFIG_FILE || __dirname + '/mappings.json';
+try {
+    ldapToObject = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+    debugOut("Loaded mappings:");
+    debugOut(ldapToObject);
+} catch (err) {
+    console.log("Error loading mappings from "+configFile+": "+err.type);
+    process.exit(1);
+}
 
 // make inverse mappings
 var objectToLdap = {};
