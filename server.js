@@ -128,8 +128,11 @@ function doQuery(req, res, next, objtype, whereClause) {
 			res.send(obj);
 		}
 		markTestAndEnd(res, objtype);
-	} , function () {
+	} , function (data, response) {
         // TODO - Figure out the correct error
+        console.log("Error with query " + query);
+        console.log(data);
+        console.log(response);
         return next(new ldap.OperationsError());
 	});    
 }
@@ -228,12 +231,19 @@ function(req, res, next) {
                             // Attribute names are normalized to lower case in ldapjs
                             req.connection.objectFields[ot].push(data.fields[i].name.toLowerCase());
                         }
+                        debugOut("Loaded fields for "+ot);
+                        debugOut(req.connection.objectFields[ot]);
                         doQuery(req, res, next, ot, whereClause);                        
                     }
-                }(objtype), function () {
-                    // TODO - Figure out the correct error
-                    return next(new ldap.OperationsError());
-                });
+                }(objtype), function(ot) {
+                    return function (data, response) {
+                        // TODO - Figure out the correct error
+                        console.log("Error with describe on " + ot);
+                        console.log(data);
+                        console.log(response);
+                        return next(new ldap.OperationsError());
+                	}
+            	}(objtype));
             }            
         } else {
             markTestAndEnd(res, objtype);
