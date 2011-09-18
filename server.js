@@ -224,7 +224,7 @@ function(req, res, next) {
                 }
                 // Need a closure here otherwise we'll keep a reference to 
                 // the objtype value that can change before we get called back
-                req.connection.api.describe(objtype, function(ot) {
+                req.connection.api.describe(objtype, function(ot, wc) {
                     return function(data) {
                         req.connection.objectFields[ot] = [];
                         for ( var i in data.fields ) {
@@ -233,9 +233,9 @@ function(req, res, next) {
                         }
                         debugOut("Loaded fields for "+ot);
                         debugOut(req.connection.objectFields[ot]);
-                        doQuery(req, res, next, ot, whereClause);                        
+                        doQuery(req, res, next, ot, wc);                        
                     }
-                }(objtype), function(ot) {
+                }(objtype, whereClause), function(ot) {
                     return function (data, response) {
                         // TODO - Figure out the correct error
                         console.log("Error with describe on " + ot);

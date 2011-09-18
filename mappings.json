@@ -7,15 +7,18 @@
             "inetOrgPerson"
         ],
         "mappings": {
+            "c": "country",
             "cn": "name",
             "departmentnumber": "department",
             "displayname": "name",
             "facsimiletelephonenumber": "fax",
             "givenname": "firstname",
+            "l": "city",
             "mail": "email",
             "mobile": "mobilephone",
             "preferredlanguage": "localesidkey",
             "sn": "lastname",
+            "st": "state",
             "telephonenumber": "phone",
             "uid": "id"
         }
@@ -28,15 +31,20 @@
             "inetOrgPerson"
         ],
         "mappings": {
+            "c": "mailingcountry",
             "cn": "name",
             "departmentnumber": "department",
             "displayname": "name",
             "facsimiletelephonenumber": "fax",
             "givenname": "firstname",
+            "l": "mailingcity",
             "mail": "email",
             "mobile": "mobilephone",
+            "postalcode": "mailingpostalcode",
             "telephonenumber": "phone",
             "sn": "lastname",
+            "st": "mailingstate",
+            "street": "mailingstreet",
             "uid": "id"
         }
     },
@@ -48,13 +56,17 @@
             "inetOrgPerson"
         ],
         "mappings": {
+            "c": "country",
             "cn": "name",
             "displayname": "name",
             "facsimiletelephonenumber": "fax",
             "givenname": "firstname",
+            "l": "city",
             "mail": "email",
-            "telephonenumber": "phone",
+            "mobile": "mobilephone",
             "sn": "lastname",
+            "st": "state",
+            "telephonenumber": "phone",
             "uid": "id"
         }
     }

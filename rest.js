@@ -41,6 +41,8 @@ function request(options) {
         		      request(options);		              
 		          });
 		      }
+		  } else {
+		      options.error(data, response);
 		  }
 	});
 }
